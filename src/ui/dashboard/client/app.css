@@ -102,7 +102,9 @@
         --ios-fill: oklch(0.46 0.012 245 / 0.10);
         --ios-fill-quat: oklch(0.46 0.012 245 / 0.05);
         --ios-overlay: oklch(0.14 0.008 245 / 0.5);
-    }
+}
+
+/* asset refresh marker */
 
     body.dark {
         /* === Signal Terminal v1.0 — instrument identity (dark · default) ===
