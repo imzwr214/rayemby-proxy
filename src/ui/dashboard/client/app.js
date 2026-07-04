@@ -634,9 +634,9 @@
         }
         function renderLogRows() {
             const tbody = document.getElementById('logTableBody');
-            if (!tbody) return;
             if (!_statsRecents.length) {
-                tbody.innerHTML = '<tr><td colspan="5" class="cell-loading">暂无日志记录</td></tr>';
+                if (tbody) tbody.innerHTML = '<tr><td colspan="5" class="cell-loading">暂无日志记录</td></tr>';
+                renderPlaybackLogCards([]);
                 updateLogSortInd(); return;
             }
             const rows = _statsRecents.slice().sort((a, b) => {
@@ -644,7 +644,7 @@
                 const d = ta < tb ? -1 : (ta > tb ? 1 : 0);
                 return _logSortDir === 'asc' ? d : -d;
             });
-            tbody.innerHTML = rows.map(log => {
+            if (tbody) tbody.innerHTML = rows.map(log => {
                 const isChina = log.country === 'CN';
                 const geo = isChina ? '中国大陆' : _embyEscape(log.country || 'Unknown');
                 return '<tr>'
@@ -655,7 +655,28 @@
                     + '<td data-label="设备标识 (UA)" class="log-ua" title="' + _embyEscape(log.ua) + '">' + _embyEscape(log.ua) + '</td>'
                     + '</tr>';
             }).join('');
+            renderPlaybackLogCards(rows);
             updateLogSortInd();
+        }
+        function renderPlaybackLogCards(rows) {
+            const box = document.getElementById('playbackLogList');
+            if (!box) return;
+            if (!rows.length) {
+                box.innerHTML = '<div class="ka-empty">暂无播放记录</div>';
+                return;
+            }
+            box.innerHTML = rows.slice(0, 20).map(log => {
+                const isChina = log.country === 'CN';
+                const geo = isChina ? '中国大陆' : _embyEscape(log.country || 'Unknown');
+                return '<div class="playback-row">' +
+                    '<span class="playback-dot"></span>' +
+                    '<div class="playback-main">' +
+                        '<div class="playback-title"><b>/' + _embyEscape(log.prefix) + '</b><span>' + _embyEscape(log.timestamp) + '</span></div>' +
+                        '<div class="playback-meta"><span>' + _embyEscape(log.ip) + '</span><span>' + geo + '</span></div>' +
+                        '<div class="playback-ua" title="' + _embyEscape(log.ua) + '">' + _embyEscape(log.ua || 'Unknown UA') + '</div>' +
+                    '</div>' +
+                '</div>';
+            }).join('');
         }
 
         async function loadDashboardData() {
@@ -747,10 +768,16 @@
             // ==========================================
             // 🌟 正常加载下面的图表数据 (带有10秒防卡死超时保护)
             // ==========================================
-            document.getElementById('logTableBody').innerHTML = '<tr><td colspan="5" class="cell-loading">数据分析引擎计算中...</td></tr>';
-            document.getElementById('trafficToday').innerText = '拉取中...';
-            document.getElementById('traffic7d').innerText = '拉取中...';
-            document.getElementById('traffic30d').innerText = '拉取中...';
+            const logBody = document.getElementById('logTableBody');
+            if (logBody) logBody.innerHTML = '<tr><td colspan="5" class="cell-loading">数据分析引擎计算中...</td></tr>';
+            const playbackList = document.getElementById('playbackLogList');
+            if (playbackList) playbackList.innerHTML = '<div class="ka-empty">播放记录加载中...</div>';
+            const trafficTodayEl = document.getElementById('trafficToday');
+            const traffic7dEl = document.getElementById('traffic7d');
+            const traffic30dEl = document.getElementById('traffic30d');
+            if (trafficTodayEl) trafficTodayEl.innerText = '拉取中...';
+            if (traffic7dEl) traffic7dEl.innerText = '拉取中...';
+            if (traffic30dEl) traffic30dEl.innerText = '拉取中...';
 
             try {
                 const controller = new AbortController();
@@ -764,9 +791,9 @@
 
                 updateChartColors();
 
-                document.getElementById('trafficToday').innerText = data.trafficToday || '未知';
-                document.getElementById('traffic7d').innerText = data.traffic7d || '未知';
-                document.getElementById('traffic30d').innerText = data.traffic30d || '未知';
+                if (trafficTodayEl) trafficTodayEl.innerText = data.trafficToday || '未知';
+                if (traffic7dEl) traffic7dEl.innerText = data.traffic7d || '未知';
+                if (traffic30dEl) traffic30dEl.innerText = data.traffic30d || '未知';
                 // 统计数据到位后刷新运维看板「今日流量」信号(看板预取/懒加载完成时回填)
                 if (typeof updateAuroraKpis === 'function') updateAuroraKpis();
 
@@ -842,7 +869,8 @@
 
             } catch (e) {
                 const errMsg = e.name === 'AbortError' ? '网络超时，CF 接口拥堵，请稍后重试' : e.message;
-                document.getElementById('logTableBody').innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--err); padding: 30px;">独立图表数据拉取失败: ${errMsg}</td></tr>`;
+                if (logBody) logBody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--err); padding: 30px;">独立图表数据拉取失败: ${errMsg}</td></tr>`;
+                if (playbackList) playbackList.innerHTML = '<div class="ka-empty">播放记录拉取失败: ' + _embyEscape(errMsg) + '</div>';
             }
         }
 
@@ -994,7 +1022,7 @@
         var __statsInited = false;
         // 目的地 → 子分区(沿用现有 .app-section data-section key)
         var DEST_MAP = {
-            monitor: { label: '监控', tabs: [ { key: 'overview', label: '看板' }, { key: 'stats', label: '统计' } ] },
+            monitor: { label: '监控', tabs: [ { key: 'overview', label: '看板' }, { key: 'playback', label: '播放记录' }, { key: 'stats', label: '统计' } ] },
             network: { label: '网络', tabs: [ { key: 'speed', label: '测速 & DNS', section: 'speed', panel: 'speed' }, { key: 'cdn', label: '优选 CDN', section: 'speed', panel: 'cdn' }, { key: 'redirect', label: '重定向白名单', section: 'speed', panel: 'redirect' } ] },
             config:  { label: '配置', tabs: [ { key: 'settings', label: '部署节点' }, { key: 'tools', label: '工具箱' }, { key: 'danger', label: '危险区' } ] }
         };
@@ -1050,7 +1078,7 @@
                     if (document.body) document.body.classList.remove('is-scrolled');
                 } catch (e) {}
                 try { localStorage.setItem('emby_active_section', tab); localStorage.setItem('emby_active_dest', dest); } catch (e) {}
-                if (tab === 'stats') {
+                if (tab === 'stats' || tab === 'playback') {
                     if (!window.__statsLoaded) { window.__statsLoaded = true; loadDashboardData(); }
                     else { setTimeout(function () {
                         if (trendChartInstance) trendChartInstance.resize();
@@ -1737,6 +1765,62 @@
             }
             return false;
         }
+        function keepaliveStatus(route, nowSec) {
+            const days = route.keepalive_days | 0;
+            if (days <= 0) return null;
+            const last = route.keepalive_last_played_at | 0;
+            if (!last) {
+                return { tone: 'idle', rank: 1, label: '未播放', detail: '窗口 ' + days + ' 天', remainHours: null };
+            }
+            const remainSec = last + days * 86400 - nowSec;
+            if (remainSec <= 0) {
+                return { tone: 'bad', rank: 0, label: '已超期', detail: '超期 ' + Math.ceil(Math.abs(remainSec) / 86400) + ' 天', remainHours: 0 };
+            }
+            if (remainSec <= 86400) {
+                return { tone: 'warn', rank: 0, label: '即将到期', detail: '剩余 ' + Math.max(1, Math.ceil(remainSec / 3600)) + ' 小时', remainHours: Math.ceil(remainSec / 3600) };
+            }
+            return { tone: 'ok', rank: 2, label: '正常', detail: '剩余 ' + Math.ceil(remainSec / 86400) + ' 天', remainHours: Math.ceil(remainSec / 3600) };
+        }
+        function renderKeepaliveModule(routes) {
+            const el = document.getElementById('keepaliveModule');
+            if (!el) return;
+            const nowSec = Math.floor(Date.now() / 1000);
+            const items = (routes || []).map(function (r) {
+                const st = keepaliveStatus(r, nowSec);
+                return st ? { route: r, status: st } : null;
+            }).filter(Boolean);
+            if (!items.length) {
+                el.innerHTML = '<div class="ka-card ka-empty">还没有开启保号提醒的节点。到节点编辑里设置“保号天数”后，这里会自动显示。</div>';
+                return;
+            }
+            const due = items.filter(function (it) { return it.status.tone === 'bad' || it.status.tone === 'warn'; }).length;
+            const idle = items.filter(function (it) { return it.status.tone === 'idle'; }).length;
+            const normal = Math.max(0, items.length - due - idle);
+            items.sort(function (a, b) {
+                if (a.status.rank !== b.status.rank) return a.status.rank - b.status.rank;
+                return (a.status.remainHours == null ? 999999 : a.status.remainHours) - (b.status.remainHours == null ? 999999 : b.status.remainHours);
+            });
+            const rows = items.slice(0, 5).map(function (it) {
+                const r = it.route, st = it.status;
+                const name = nrdEsc(r.remark || r.prefix || '未命名节点');
+                const prefix = nrdEsc(r.prefix || '');
+                return '<div class="ka-row">' +
+                    '<span class="ka-dot ' + st.tone + '"></span>' +
+                    '<div class="ka-main"><b>' + name + '</b><span>/' + prefix + ' · ' + st.detail + '</span></div>' +
+                    '<span class="ka-badge ' + st.tone + '">' + st.label + '</span>' +
+                '</div>';
+            }).join('');
+            el.innerHTML = '<section class="ka-card">' +
+                '<div class="ka-head"><div><span class="ka-eyebrow">KEEPALIVE</span><h3>保号提醒</h3></div><button type="button" class="btn-tier is-sm" onclick="showDest(&#39;config&#39;, &#39;settings&#39;)">设置节点</button></div>' +
+                '<div class="ka-stats">' +
+                    '<span><b>' + items.length + '</b><em>已开启</em></span>' +
+                    '<span><b>' + due + '</b><em>需处理</em></span>' +
+                    '<span><b>' + normal + '</b><em>正常</em></span>' +
+                    '<span><b>' + idle + '</b><em>未播放</em></span>' +
+                '</div>' +
+                '<div class="ka-list">' + rows + '</div>' +
+            '</section>';
+        }
         async function load() {
             try {
                 const [res, stateRes, probesRes] = await Promise.all([
@@ -1773,6 +1857,7 @@
 
                 // 🌟 新增：把节点流量数据存进全局内存，供大屏瞬间读取
                 window.globalRoutesData = data;
+                renderKeepaliveModule(data);
 
                 const container = document.getElementById('list-grid');
                 if(data.length === 0) {
@@ -3376,6 +3461,7 @@
             // === iOS-native chrome v5: brand, large-title, scroll observer, logout row ===
             const IOS_SECTION_TITLES = {
                 overview:    { title: '概览',        sub: '实时状态与核心指标' },
+                playback:    { title: '播放记录',    sub: '真实播放与保号提醒' },
                 speed:       { title: '测速 & DNS',  sub: '节点延迟与解析探测' },
                 stats:       { title: '数据统计',     sub: '流量、并发与历史趋势' },
                 settings:    { title: '系统设置',     sub: '应用、通知与账户' },

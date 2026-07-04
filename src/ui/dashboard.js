@@ -274,6 +274,22 @@ export const HTML_UI = `
             </div>
             </section><!-- /sec-stats -->
 
+            <!-- ===== 分区: 播放记录 ===== -->
+            <section id="sec-playback" class="app-section" data-section="playback" style="display:none;">
+            <div id="keepaliveModule" class="keepalive-module" aria-live="polite">
+                <div class="ka-empty">保号模块读取中...</div>
+            </div>
+            <div class="card playback-card">
+                <div class="stats-head">
+                    <h2 class="section-title"><svg class="st-ico" aria-hidden="true"><use href="#i-eye"/></svg>播放记录<span class="stats-head-sub">仅 PlaybackInfo 真实播放</span></h2>
+                    <button type="button" class="btn-tier is-sm" onclick="loadDashboardData()" title="重新拉取播放记录"><svg class="bt-ico" aria-hidden="true"><use href="#i-shuffle"/></svg>刷新</button>
+                </div>
+                <div id="playbackLogList" class="playback-log-list">
+                    <div class="ka-empty">播放记录加载中...</div>
+                </div>
+            </div>
+            </section><!-- /sec-playback -->
+
             <!-- ===== 分区: 线路测速 ===== -->
             <section id="sec-speed" class="app-section" data-section="speed" style="display:none;">
 

@@ -16,6 +16,10 @@ import { handleStatusApi } from './api/status.js';
 export async function handleRequest(request, env, ctx) {
     const url = new URL(request.url);
 
+    if (url.pathname.startsWith('/static/') && env.ASSETS) {
+        return env.ASSETS.fetch(request);
+    }
+
     // 共享 schema 初始化（幂等；首次请求后为内存 no-op）
     if (env.DB) { await ensureSchema(env); }
 
